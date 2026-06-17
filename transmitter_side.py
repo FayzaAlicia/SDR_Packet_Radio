@@ -23,7 +23,6 @@
 # Transmit signal
 
 import random
-import numpy as math
 
 import globals
 from globals import preamble
@@ -82,7 +81,7 @@ def bpskMapper (data):
 def sampleData(data, samples_per_symbol):
     sampledData = []
     for i in data:
-        sampledData.append(data[i])
+        sampledData.append(i)
         for j in range(samples_per_symbol - 1):
             sampledData.append(0)
     return sampledData
