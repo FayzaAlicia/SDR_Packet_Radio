@@ -25,8 +25,6 @@
 import random
 
 import globals
-from globals import preamble
-
 
 #Random Data Generator
 def generateData (dataSize):
@@ -39,7 +37,7 @@ def generateData (dataSize):
 def generateNoise(data):
     noisyData = []
     for i in data:
-        noise = i + random.uniform(-0.1, 0.1)
+        noise = i + random.uniform(-globals.NOISE, globals.NOISE)
         noisyData.append(noise)
     return noisyData
 
@@ -52,7 +50,7 @@ def assemblePacket(data):
     packet = []
 
     #add payload length
-    payloadLength = len(data)
+    payloadLength = len(data)//8 #convert from bits to bytes
     lengthString = format(payloadLength, "08b")
 
     for i in lengthString:
@@ -67,8 +65,7 @@ def assemblePacket(data):
         packet.append(i)
 
     #add preamble
-    for i in reversed (preamble):
-        packet.insert(0, i)
+    packet = globals.PREAMBLE + packet
 
     return packet
 
@@ -98,7 +95,7 @@ def transmitter(data):
     symbols = bpskMapper(packetBits)
 
     # Upsample symbols
-    upsampled = sampleData(symbols, globals.samples_per_symbol)
+    upsampled = sampleData(symbols, globals.SPS)
 
     # Pulse shape
     shapedSignal = globals.shapePulse(upsampled)

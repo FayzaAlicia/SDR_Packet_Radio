@@ -1,34 +1,32 @@
-#Packet sections
+#Packet format:
+#[Preamble] [Payload Length] [Payload Data] [CRC]
 import numpy as math
 
-preamble = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0]
-crc8 = [1,0,0,0,0,0,1,1,1]
+PREAMBLE = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
+CRC8 = [1, 0, 0, 0, 0, 0, 1, 1, 1]
 PREAMBLE_LEN = 16
-PAYLOAD_LEN = 8
+PAYLOAD_LEN_LEN = 8
 CRC_LEN = 8
-samples_per_symbol = 8 # Samples per symbol (oversampling rate)
-alpha = 0.35      # Roll-off factor (typically between 0.2 and 0.5)
-num_symbols = 10  # Filter span (how many symbols wide the filter is)
+NOISE = 0.1
+SPS = 8 # Samples per symbol (oversampling rate)
+ALPHA = 0.35      # Roll-off factor (typically between 0.2 and 0.5)
+NUM_SYMBOLS = 10  # Filter span (how many symbols wide the filter is)
 
 # CRC Calculation
 def crcCalculation(data):
-    workingData = []
-
-    # Copy data into workingData
-    for bit in data:
-        workingData.append(int(bit))
+    workingData = data.copy()
 
     # Add zeros at the end.
     # Since crc8 has 9 bits, the remainder will be 8 bits.
-    for i in range(len(crc8) - 1):
+    for i in range(len(CRC8) - 1):
         workingData.append(0)
 
     # Do binary long division using XOR
     for i in range(len(data)):
         match workingData[i]:
             case 1:
-                for j in range(len(crc8)):
-                    workingData[i + j] = workingData[i + j] ^ crc8[j]
+                for j in range(len(CRC8)):
+                    workingData[i + j] = workingData[i + j] ^ CRC8[j]
 
             case 0:
                 pass
@@ -41,12 +39,12 @@ def crcCalculation(data):
 
     return remainder
 
-#Create Raised Cosine Filter
+#Create Root Raised Cosine Filter
 def createFilter(alpha, sps, numSymbs):
     pi = math.pi
 
     numTaps = sps * numSymbs + 1
-    t = math.arange(-numTaps/2 + 1, numTaps/2 + 1,) / sps
+    t = math.arange(-numTaps//2 + 1, numTaps//2 + 1,) / sps
     h = math.zeros(numTaps)
 
     for i in range (len(t)):
@@ -68,7 +66,7 @@ def createFilter(alpha, sps, numSymbs):
 
 #Pulse Shaping
 def shapePulse (data):
-    pulseFilter = createFilter(alpha, samples_per_symbol, num_symbols)
+    pulseFilter = createFilter(ALPHA, SPS, NUM_SYMBOLS)
     data = math.asarray(data, dtype=float)
     pulseFilter = math.asarray(pulseFilter, dtype=float)
     return math.convolve(data,pulseFilter, mode="same")
