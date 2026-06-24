@@ -1,12 +1,17 @@
 #Packet format:
 #[Preamble] [Payload Length] [Payload Data] [CRC]
-import numpy as math
+import numpy as np
 
-PREAMBLE = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
+PREAMBLE = [
+    1, 1, 1, 0, 1, 0, 0, 1,
+    0, 1, 1, 0, 0, 0, 1, 0,
+    1, 0, 1, 1, 1, 0, 0, 1,
+    1, 0, 0, 0, 1, 1, 0, 1
+]
 CRC8 = [1, 0, 0, 0, 0, 0, 1, 1, 1]
-PREAMBLE_LEN = 16
+PREAMBLE_LEN = len(PREAMBLE)
 PAYLOAD_LEN_LEN = 8
-CRC_LEN = 8
+CRC_LEN = len(CRC8) - 1
 NOISE = 0.1
 SPS = 8 # Samples per symbol (oversampling rate)
 ALPHA = 0.35      # Roll-off factor (typically between 0.2 and 0.5)
@@ -41,32 +46,26 @@ def crcCalculation(data):
 
 #Create Root Raised Cosine Filter
 def createFilter(alpha, sps, numSymbs):
-    pi = math.pi
+    pi = np.pi
 
     numTaps = sps * numSymbs + 1
-    t = math.arange(-numTaps//2 + 1, numTaps//2 + 1,) / sps
-    h = math.zeros(numTaps)
+    t = np.arange(-numTaps//2 + 1, numTaps//2 + 1,) / sps
+    h = np.zeros(numTaps)
 
     for i in range (len(t)):
         if t[i] == 0:
             #h(0)=1 + α(4/π - 1)
             h[i] = 1 + alpha * ((4/pi) - 1)
 
-        elif math.isclose(abs(t[i]), 1/(4 * alpha)):
+        elif np.isclose(abs(t[i]), 1/(4 * alpha)):
             #h(t) = a/√2 [(1 + 2/π) sin(π/ 4a) + (1 - 2/π) cos(π/ 4a)]
-            h[i] = (alpha / math.sqrt(2)) * ((1 + 2/pi) * math.sin(pi/ (4*alpha)) + (1 - 2/pi) * math.cos(pi/ (4*alpha)))
+            h[i] = (alpha / np.sqrt(2)) * ((1 + 2/pi) * np.sin(pi/ (4*alpha)) + (1 - 2/pi) * np.cos(pi/ (4*alpha)))
 
         else:
             #h(t) = [sin(πt(1−α))+4αtcos(πt(1+α))] / [πt(1−(4αt)2^)]
-            numerator = math.sin(pi*t[i]*(1 - alpha)) + 4 * alpha * t[i] * math.cos(pi * t[i] * (1 + alpha))
+            numerator = np.sin(pi*t[i]*(1 - alpha)) + 4 * alpha * t[i] * np.cos(pi * t[i] * (1 + alpha))
             denominator = pi * t[i]*(1 - (4 * alpha * t[i])**2)
             h[i] = numerator/denominator
 
+    h = h / np.sqrt(np.sum(h ** 2))
     return h
-
-#Pulse Shaping
-def shapePulse (data):
-    pulseFilter = createFilter(ALPHA, SPS, NUM_SYMBOLS)
-    data = math.asarray(data, dtype=float)
-    pulseFilter = math.asarray(pulseFilter, dtype=float)
-    return math.convolve(data,pulseFilter, mode="same")
