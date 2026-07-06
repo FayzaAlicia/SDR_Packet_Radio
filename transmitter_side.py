@@ -20,6 +20,7 @@
 # Transmit signal
 
 import random
+import string
 import numpy as np
 import globals
 import adi
@@ -90,6 +91,13 @@ def sampleData(data, samples_per_symbol):
     return sampledData
 
 
+def generate_random_string(length=10):
+    # Combine letters and digits into a pool of characters
+    characters = string.ascii_letters + string.digits
+
+    # Randomly pick characters and join them into a string
+    return ''.join(random.choices(characters, k=length))
+
 #Final Transmitter
 def transmitter(data):
     # Convert message to bits
@@ -97,7 +105,6 @@ def transmitter(data):
 
     # Build packet
     packetBits = assemblePacket(payloadBits)
-    print (packetBits)
 
     # Map bits to BPSK symbols
     symbols = bpskMapper(packetBits)
@@ -119,7 +126,7 @@ def transmitter(data):
     # Add noise
     #noisySignal = generateNoise(shapedSignal)
 
-    return plutoIQ
+    return packetBits
 
 
 def makePlutoIQ(data):
@@ -151,6 +158,7 @@ def plutoTransmit(data):
 
     time.sleep(0.5)
 
+
 def plutoStopTransmit():
     # Stop TX buffer
     sdr.tx_destroy_buffer()
@@ -172,6 +180,7 @@ def txBasicSettings(loopBack):
             print("Loopback enabled.")
         except Exception as e:
             print("Loopback could not be enabled:", e)
+
 
 #Pulse Shaping
 def shapePulse (data):

@@ -49,8 +49,8 @@ def debugPreamblePhase(data, bestIndex):
 
     phases = np.unwrap(np.angle(product))
 
-    print("Preamble phases:")
-    print([round(p, 3) for p in phases])
+    # print("Preamble phases:")
+    # print([round(p, 3) for p in phases])
 
 
 #Find the offset index of the preamble
@@ -170,8 +170,8 @@ def bestOffsetedData(data):
 def recoverPacket(data):
     #remove preamble
     rxPacket = data[globals.PREAMBLE_LEN : ]
-    print("Bits after preamble:", rxPacket[:32])
-    print("Length bits:", rxPacket[0:globals.PAYLOAD_LEN_LEN])
+    # print("Bits after preamble:", rxPacket[:32])
+    # print("Length bits:", rxPacket[0:globals.PAYLOAD_LEN_LEN])
 
     #find payload length
     payloadLength = int("".join(map(str, rxPacket[0:globals.PAYLOAD_LEN_LEN])), 2) * 8 #convert from bytes to bits
@@ -206,7 +206,10 @@ def binaryToASCII(data, payloadLength):
 
 
 #Final Receiver
-def receiver(data):
+def receiver():
+    #Convert from pluto form
+    data = retreivePlutoIQ()
+
     # Convert to numpy array
     data = np.array(data)
 
@@ -219,19 +222,27 @@ def receiver(data):
     # Now find the best symbol timing offset, preamble, phase, and demap
     rxData = bestOffsetedData(data)
 
-    # Recover packet
-    payloadData, crc, recoveredPacket = recoverPacket(rxData)
-
-    # Check CRC
-    validCRC = checkCRC(recoveredPacket, crc)
+    packetValid = False
 
     ogMessage = ""
-    if validCRC:
-        ogMessage = binaryToASCII(payloadData, 8)
+    print(bool(rxData))
+
+    if bool(rxData):
+        # Recover packet
+        payloadData, crc, recoveredPacket = recoverPacket(rxData)
+
+        # Check CRC
+        validCRC = checkCRC(recoveredPacket, crc)
+
+        if validCRC:
+            ogMessage = binaryToASCII(payloadData, 8)
+            packetValid = True
+
+        return ogMessage, packetValid, rxData
+
     else:
         ogMessage = "CRC not matching"
-
-    return ogMessage
+        return ogMessage, packetValid, []
 
 
 def rxBasicSettings():
@@ -255,9 +266,7 @@ def retreivePlutoIQ():
     #Convery array to list  so receiver can decode it
     rx_iq = rx_iq.tolist()
 
-    rxData = receiver(rx_iq)
-
-    return rxData
+    return rx_iq
 
 #Match filter
 def matchedFilter(data):
